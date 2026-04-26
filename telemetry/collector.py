@@ -20,7 +20,7 @@ from typing import Dict, List, Optional, Any
 from pathlib import Path
 
 import httpx
-from schemas import TelemetryBundle, KPI, LogEvent, Alarm
+from .schemas import TelemetryBundle, KPI, LogEvent, Alarm
 
 logging.basicConfig(
     level=logging.INFO,

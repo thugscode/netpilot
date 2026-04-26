@@ -5,7 +5,7 @@ Formatter for converting raw telemetry into structured context for LLM processin
 import json
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
-from schemas import TelemetryBundle, KPI, Alarm, LogEvent
+from .schemas import TelemetryBundle, KPI, Alarm, LogEvent
 
 
 class TelemetryFormatter:

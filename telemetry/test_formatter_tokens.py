@@ -15,8 +15,8 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from schemas import TelemetryBundle, KPI, Alarm, LogEvent
-from formatter import TelemetryFormatter
+from .schemas import TelemetryBundle, KPI, Alarm, LogEvent
+from .formatter import TelemetryFormatter
 
 
 def create_sample_bundle() -> TelemetryBundle:

@@ -71,8 +71,10 @@ def test_imports():
         return False
     
     try:
-        from agent import *
-        print("✅ agent module wildcard import successful")
+        from agent.models import DiagnosisResult
+        from agent.prompts import get_system_prompt
+        from agent.pipeline import AgentPipeline
+        print("✅ agent module imports successful")
     except Exception as e:
         print(f"❌ agent module import failed: {e}")
         return False
@@ -218,6 +220,7 @@ def test_policy_gate():
         
         # Create test data
         kpi = KPI(
+            service="test-service",
             error_rate=0.02,
             latency_p50_ms=100,
             latency_p95_ms=250,
@@ -227,11 +230,13 @@ def test_policy_gate():
             downstream_error_rate=0.01,
             available=True,
             requests_5m=1000,
+            request_count_5m=1000,
             timestamp=datetime.now().isoformat(),
         )
         
         telemetry = TelemetryBundle(
             timestamp=datetime.now().isoformat(),
+            collection_duration_ms=100,
             kpis={"test-service": kpi},
             logs={},
             alarms=[],
