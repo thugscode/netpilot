@@ -1,0 +1,75 @@
+groups:
+  - name: netpilot_alerts
+    interval: 30s
+    rules:
+      # Alert: Pod restart count > 2 in 5 minutes
+      - alert: HighPodRestartRate
+        expr: |
+          increase(kube_pod_container_status_restarts_total[5m]) > 2
+        for: 1m
+        labels:
+          severity: critical
+          component: pod
+        annotations:
+          summary: "High pod restart rate detected"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted {{ $value }} times in 5 minutes"
+
+      # Alert: HTTP error rate > 5%
+      - alert: HighErrorRate
+        expr: |
+          (sum(rate(service_requests_total{status=~"5.."}[5m])) by (service) / sum(rate(service_requests_total[5m])) by (service)) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          component: http
+        annotations:
+          summary: "High HTTP error rate detected"
+          description: "Service {{ $labels.service }} error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # Alert: P99 latency > 500ms
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.99, sum(rate(service_request_duration_seconds_bucket[5m])) by (service, le)) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          component: latency
+        annotations:
+          summary: "High P99 latency detected"
+          description: "Service {{ $labels.service }} P99 latency is {{ $value | humanizeDuration }} (threshold: 500ms)"
+
+      # Alert: Service is down (no metrics for 2 minutes)
+      - alert: ServiceDown
+        expr: |
+          absent(up{job="kubernetes-pods"}) > 0
+        for: 2m
+        labels:
+          severity: critical
+          component: service
+        annotations:
+          summary: "Service is unreachable"
+          description: "Service {{ $labels.app }} has not sent metrics for 2 minutes"
+
+      # Alert: Downstream call failures > 10%
+      - alert: HighDownstreamFailureRate
+        expr: |
+          (sum(rate(service_downstream_calls_total{status="error"}[5m])) by (service, downstream) / sum(rate(service_downstream_calls_total[5m])) by (service, downstream)) > 0.1
+        for: 1m
+        labels:
+          severity: warning
+          component: downstream
+        annotations:
+          summary: "High downstream call failure rate"
+          description: "Service {{ $labels.service }} calling {{ $labels.downstream }} has {{ $value | humanizePercentage }} error rate (threshold: 10%)"
+
+      # Alert: Cascade failure detected (multiple services with errors)
+      - alert: CascadeFailureDetected
+        expr: |
+          count(count_over_time(ALERTS{alertname=~"HighErrorRate|ServiceDown"}[5m]) > 3) >= 2
+        for: 1m
+        labels:
+          severity: critical
+          component: cascade
+        annotations:
+          summary: "Cascade failure detected"
+          description: "Multiple services showing errors/failures - possible cascading failure in progress"
