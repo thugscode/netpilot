@@ -348,19 +348,65 @@ python telemetry/test_formatter_tokens.py
 
 ## 📋 TODO: Remaining Components
 
-### Phase 2: Agent Pipeline (`agent/`) [READY TO START]
+### Phase 2: Agent Pipeline (`agent/`) [✅ COMPLETE]
+**Files created**:
+- `models.py` - Pydantic models for DiagnosisResult, RemediationAction (60 lines)
+- `prompts.py` - System prompt + few-shot examples for LLM (450+ lines)
+- `__init__.py` - Package exports
+- `README.md` - Complete API reference
+- `test_prompts.py` - Comprehensive test suite (340+ lines)
+
+**Responsibilities** [IMPLEMENTED]:
+- ✅ LLM diagnosis system prompt (2,169 chars, ~540 tokens)
+- ✅ Few-shot examples: pod-crash scenario (1,494 input + 1,229 output chars)
+- ✅ Few-shot examples: link-degrade scenario (1,460 input + 1,163 output chars)
+- ✅ DiagnosisResult schema with root_cause + ranked remediation actions
+- ✅ RemediationAction schema with 5 action types: restart_pod | scale_up | reroute_traffic | rollback_deploy | noop
+- ✅ Prompt message builder (system → examples → user input)
+- ✅ JSON validation for LLM responses
+- ✅ Full test coverage (4 test suites, all passing)
+
+**DiagnosisResult Schema**:
+```json
+{
+  "root_cause": "string (failure description)",
+  "root_cause_confidence": 0.0-1.0,
+  "remediation_actions": [
+    {
+      "action_type": "restart_pod|scale_up|reroute_traffic|rollback_deploy|noop",
+      "target": "service_name",
+      "params": {"action_specific_params"},
+      "confidence": 0.0-1.0,
+      "rationale": "One sentence explanation"
+    }
+  ]
+}
+```
+
+**Integration Ready**:
+- Consumes TelemetryBundle from collector
+- Formats with `to_context_window()` (350 tokens typical)
+- System + examples: 2,261 tokens
+- LLM has ~5,700 tokens for reasoning
+- Output validated as JSON before policy gate
+
+**Test Results** (agent/test_prompts.py):
+✅ Pydantic model instantiation and serialization
+✅ System prompt retrieval and validation
+✅ Few-shot examples parsing and instantiation
+✅ JSON validation (valid/invalid cases)
+✅ All 4 test suites passing
+
+### Phase 2.5: Agent Executor (`agent/`)
 **Files to create**:
-- `pipeline.py` - Main agent loop (ingest → diagnose → rank → submit)
-- `prompts.py` - System prompt + few-shot examples for LLM
-- `models.py` - Pydantic models for DiagnosisResult, RemediationAction
+- `pipeline.py` - Main agent loop (collect → diagnose → validate → submit)
 
 **Responsibilities**:
-- Consume TelemetryBundle
-- Call LLM for diagnosis (using `to_context_window()` format - now token-aware!)
-- Rank candidate actions by feasibility
-- Format actions for policy validation
-
-**Status**: ✅ Telemetry integration ready with token-managed context windows (max 3000 tokens)
+- Continuous polling of telemetry collector
+- Format telemetry with `to_context_window()`
+- Call LLM with system prompt + few-shot examples
+- Validate JSON response
+- Submit validated actions to policy gate
 
 ### Phase 3: Policy Gate (`policy/`)
 **Files to create**:
@@ -410,7 +456,8 @@ python telemetry/test_formatter_tokens.py
 - [x] Telemetry collector (KPIs, logs, alarms)
 - [x] Telemetry formatter (JSON, Markdown, context-window, JSONL)
 - [x] Token-aware formatter (compact JSON, intelligent truncation, ~3000 token limit)
-- [ ] Agent pipeline (LLM diagnosis)
+- [x] Agent pipeline (LLM diagnosis with models + prompts + examples)
+- [ ] Agent executor (main loop for continuous diagnosis)
 - [ ] Policy gate (action validation)
 - [ ] Executor (remediation)
 - [ ] Evaluation harness (metrics)
