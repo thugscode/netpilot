@@ -362,23 +362,27 @@ class PolicyGate:
         # Calculate blast radius (upstream services affected)
         radius = blast_radius(target)
         
-        # Get configuration limit
+        # Get configuration limit (stored as percentage, convert to count)
         config = get_config()
-        max_radius = config.policy_gate.max_blast_radius
+        max_radius_pct = config.policy_gate.max_blast_radius_pct  # e.g., 50.0%
+        total_services = 5  # We have 5 services in topology
+        max_radius_count = int((max_radius_pct / 100.0) * total_services)
         
-        if radius > max_radius:
-            pct = (radius / 5) * 100  # Assuming 5 services total
+        if radius > max_radius_count:
+            pct = (radius / total_services) * 100
             reason = (
                 f"Blast radius too large: {radius} services affected "
-                f"({pct:.1f}% of total), exceeds max {max_radius}"
+                f"({pct:.1f}% of total), exceeds max {max_radius_count} "
+                f"({max_radius_pct:.1f}% limit)"
             )
             logger.warning(reason)
             return False, reason
         
-        pct = (radius / 5) * 100 if radius < 5 else 100
+        pct = (radius / total_services) * 100
         reason = (
             f"Blast radius acceptable: {radius} services affected "
-            f"({pct:.1f}% of total), within max {max_radius}"
+            f"({pct:.1f}% of total), within max {max_radius_count} "
+            f"({max_radius_pct:.1f}% limit)"
         )
         return True, reason
 
