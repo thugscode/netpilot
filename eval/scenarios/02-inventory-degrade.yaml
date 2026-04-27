@@ -1,0 +1,11 @@
+name: inventory-service link degradation
+description: Network degradation on inventory-service with 200ms latency and 10% packet loss
+fault: link-degrade
+target: inventory-service
+duration_seconds: 60
+expected_action: scale_up
+expected_target: inventory-service
+timeout_seconds: 300
+sla_bounds:
+  max_error_rate: 0.05
+  max_p99_latency_ms: 2000

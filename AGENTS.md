@@ -1,6 +1,6 @@
 # Netpilot - Self-Healing Kubernetes Agent System
 
-**Status**: 55% Complete (Simulation, Telemetry, & Policy Gate ready)
+**Status**: 75% Complete (Simulation, Telemetry, Policy Gate, Executor, & Evaluation Harness ready)
 
 ## Project Overview
 
@@ -444,26 +444,85 @@ python telemetry/test_formatter_tokens.py
   - Blast Radius Validation: 3 tests passing
   - Full Validation Workflow: 4 tests passing
 
-### Phase 4: Executor (`executor/`)
-**Files to create**:
-- `remediation.py` - Maps approved actions to kubectl/REST calls
+### Phase 4: Executor (`executor/`) [✅ COMPLETE]
+**Files created**:
+- `__init__.py` - Package exports
+- `remediation.py` - Remediation action execution (403 lines)
+- `test_remediation.py` - Comprehensive tests (454 lines, 18/18 passing)
+- `README.md` - Complete API reference (200+ lines)
 
-**Responsibilities**:
-- Execute approved remediation actions
-- Track execution status
-- Collect post-action telemetry for verification
+**Responsibilities** [IMPLEMENTED]:
+- ✅ Dispatch on action_type (5 action types)
+- ✅ Execute kubectl commands with try/except
+- ✅ restart_pod: `kubectl delete pod -l app={target}`
+- ✅ scale_up: `kubectl scale deployment {target} --replicas={params['replicas']}`
+- ✅ reroute_traffic: Stub (logs intent for VirtualService patching)
+- ✅ rollback_deploy: `kubectl set image deployment/{target} app={previous_image}`
+- ✅ noop: Log "no action taken"
+- ✅ Structured error handling with RemediationError and ExecutionResult
+- ✅ Batch execution for multiple actions
+- ✅ Full logging with timestamps and status
 
-### Phase 5: Evaluation (`eval/`)
-**Files to create**:
-- `harness.py` - Runs scenario suite, collects MTTR/FPR/SLA metrics
-- `scenarios/` - YAML definitions of injected failure scenarios
-- `report.py` - Generates evaluation summary
+**Test Results** [✅ 18/18 PASSING]:
+- Restart Pod: Success, failure, timeout (3 tests)
+- Scale Up: Success, missing params, failure (3 tests)
+- Reroute Traffic: Stub behavior (1 test)
+- Rollback Deploy: Success, not in registry, no previous image (3 tests)
+- No-op: Always succeeds (1 test)
+- ExecutionResult: Serialization, defaults (2 tests)
+- Batch Execute: Mixed results (1 test)
+- RemediationError: Error construction (1 test)
+- Kubectl Integration: Command validation (3 tests)
 
-**Responsibilities**:
-- Run repeatable failure scenarios
-- Measure Mean Time To Recovery (MTTR)
-- Track False Positive Rate (FPR)
-- Verify SLA compliance
+**Integration Ready**:
+- Consumes RemediationAction from agent pipeline
+- Returns ExecutionResult with success/error details
+- Queries ROLLBACK_REGISTRY for rollback actions
+- Feeds execution results to post-action verification
+- Structured logging for audit trails
+
+### Phase 5: Evaluation (`eval/`) [✅ COMPLETE]
+**Files created**:
+- `harness.py` - Scenario runner with ScenarioResult, EvaluationMetrics, SLA checking (447 lines)
+- `test_harness.py` - Comprehensive tests (440+ lines, 14/14 passing)
+- `__init__.py` - Package exports
+- `scenarios/` folder with 3 YAML scenario definitions:
+  - `01-notification-crash.yaml` - Pod crash scenario
+  - `02-inventory-degrade.yaml` - Network degradation scenario
+  - `03-order-cascade.yaml` - Cascade failure scenario
+
+**Responsibilities** [IMPLEMENTED]:
+- ✅ Load scenario YAML with fault injection parameters
+- ✅ Run failure scenarios with automated fault injection
+- ✅ Poll TelemetryCollector for KPIs during recovery
+- ✅ Track Mean Time To Recovery (MTTR) in seconds
+- ✅ Measure action accuracy (expected vs actual remediation)
+- ✅ Verify SLA compliance with detailed violation tracking
+- ✅ Aggregate metrics across scenario suite
+- ✅ Save results to JSON files with summary report
+
+**Key Components** [IMPLEMENTED]:
+- `ScenarioResult` dataclass: scenario_name, target_service, fault_type, success, mttr_seconds, correct_action_taken, expected_action, actual_action, sla_violations, timestamps, reason
+- `EvaluationMetrics` dataclass: total_scenarios, successful_recoveries, correct_actions, average_mttr_seconds, false_positive_rate, timestamp
+- `load_scenario(scenario_file)`: Load YAML with validation
+- `is_sla_compliant(kpis, sla_bounds)`: Returns (is_compliant, violations)
+- `run_scenario(scenario_file, poll_interval_seconds)`: Main loop - inject fault, poll until recovery or timeout, return results
+- `run_scenario_suite(scenario_files)`: Run multiple scenarios, aggregate metrics
+- `save_results(results, metrics, output_dir)`: Save JSON + summary report
+
+**Test Results** [✅ 14/14 PASSING]:
+- TestScenarioLoading: 4 tests (load all scenarios, nonexistent handling)
+- TestScenarioResult: 3 tests (successful/failed recovery, serialization)
+- TestEvaluationMetrics: 2 tests (calculation, serialization)
+- TestSLACompliance: 5 tests (all compliant, error rate violation, latency violation, multiple violations, unknown services)
+
+**Integration Ready**:
+- Consumes TelemetryCollector for KPI polling
+- Uses fault_injector.py for scenario injection
+- Queries PolicyGate for action validation
+- Tracks MTTR and action accuracy
+- Verifies SLA compliance with policy bounds
+- Exports results for evaluation dashboard
 
 ### Phase 6: Configuration & Entrypoint
 **Files to create**:
@@ -484,12 +543,24 @@ python telemetry/test_formatter_tokens.py
 - [x] Policy invariants (SLA bounds, rollback registry, blast radius)
 - [x] Policy validation tests (22/22 invariants + 14/14 gate = 36/36 passing)
 - [x] PolicyGate validation engine (SLA bounds → rollback → blast radius)
-- [ ] Agent executor (main loop for continuous diagnosis)
-- [ ] Executor (remediation via kubectl)
-- [ ] Evaluation harness (metrics)
-- [ ] Configuration & entrypoint
-- [ ] Integration tests
-- [ ] Documentation (README.md, ARCHITECTURE.md, etc.)
+- [x] Policy tests in pytest (policy/tests/test_gate.py, 10/10 passing)
+- [x] Executor (remediation via kubectl, 18/18 tests passing)
+  - [x] restart_pod via kubectl delete pod
+  - [x] scale_up via kubectl scale deployment
+  - [x] reroute_traffic (stub/log)
+  - [x] rollback_deploy via kubectl set image
+  - [x] noop (log only)
+  - [x] Error handling (try/except, structured errors)
+  - [x] Batch execution
+- [x] Evaluation Harness (MTTR, action accuracy, SLA metrics)
+  - [x] eval/harness.py (scenario runner, 447 lines)
+  - [x] eval/test_harness.py (tests, 14/14 passing)
+  - [x] eval/scenarios/ (3 YAML scenario definitions)
+  - [x] ScenarioResult and EvaluationMetrics dataclasses
+  - [x] SLA compliance checking
+  - [x] Results aggregation and reporting
+- [ ] Agent executor loop (main loop for continuous diagnosis)
+- [ ] Configuration & entrypoint (main.py, config.py)
 
 ## 🚀 Quick Start
 

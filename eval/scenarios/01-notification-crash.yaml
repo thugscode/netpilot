@@ -1,0 +1,10 @@
+name: notification-service pod crash
+description: A single pod crash in the leaf service (notification-service)
+fault: pod-crash
+target: notification-service
+expected_action: restart_pod
+expected_target: notification-service
+timeout_seconds: 300
+sla_bounds:
+  max_error_rate: 0.03
+  max_p99_latency_ms: 500

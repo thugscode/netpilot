@@ -1,0 +1,11 @@
+name: order-service cascade failure
+description: Crashing order-service triggers cascading failure through upstream services
+fault: cascade
+target: order-service
+watch_duration_seconds: 45
+expected_action: restart_pod
+expected_target: order-service
+timeout_seconds: 300
+sla_bounds:
+  max_error_rate: 0.03
+  max_p99_latency_ms: 500
