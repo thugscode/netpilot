@@ -232,12 +232,14 @@ class TestBlastRadiusValidation:
     """Tests for blast radius checking."""
     
     def test_leaf_service_has_zero_radius(self, policy_gate):
-        """Test that leaf services have minimal blast radius."""
-        # notification-service has no callers, so blast radius = 0
+        """Test that leaf services (called by others) have acceptable blast radius."""
+        # notification-service is called by inventory-service and order-service
+        # Blast radius = 3 services (inventory-service, order-service, api-gateway)
+        # With 70% max limit, this is acceptable (60% of 5 services)
         action = create_test_action("restart_pod", "notification-service")
         allowed, reason = policy_gate._check_blast_radius(action)
         
-        # 0 affected services is within any limit
+        # Should be allowed with 70% limit
         assert allowed is True
         assert "acceptable" in reason.lower()
     
@@ -264,8 +266,8 @@ class TestBlastRadiusValidation:
     def test_blast_radius_uses_config_limit(self, policy_gate):
         """Test that blast radius check uses configuration limit."""
         # The actual limit comes from config
-        assert hasattr(policy_gate.config.policy_gate, "max_blast_radius")
-        assert isinstance(policy_gate.config.policy_gate.max_blast_radius, int)
+        assert hasattr(policy_gate.config.policy_gate, "max_blast_radius_pct")
+        assert isinstance(policy_gate.config.policy_gate.max_blast_radius_pct, (int, float))
 
 
 # ============================================================================
