@@ -73,7 +73,9 @@ class PolicyGateConfig:
     """Policy Gate Configuration"""
     
     # Maximum blast radius (% of services affected)
-    max_blast_radius_pct: float = 50.0
+    # Set to 70% to allow restarting leaf services in 5-service cluster
+    # (e.g., restarting notification-service affects 3/5 = 60% of services)
+    max_blast_radius_pct: float = 70.0
     
     # SLA bounds (examples)
     max_error_rate_pct: float = 5.0
